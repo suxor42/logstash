@@ -1,4 +1,4 @@
-FROM java:7-jre
+FROM java:8-jre
 
 # grab gosu for easy step-down from root
 RUN gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4
@@ -16,6 +16,7 @@ RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys 46095ACC85485
 
 ENV LOGSTASH_MAJOR 1.5
 ENV LOGSTASH_VERSION 1:1.5.1-1
+ENV LOGSTASH_CONF_DIR /logstash-config-dir
 
 RUN echo "deb http://packages.elasticsearch.org/logstash/${LOGSTASH_MAJOR}/debian stable main" > /etc/apt/sources.list.d/logstash.list
 
@@ -23,6 +24,17 @@ RUN set -x \
 	&& apt-get update \
 	&& apt-get install -y --no-install-recommends logstash=$LOGSTASH_VERSION \
 	&& rm -rf /var/lib/apt/lists/*
+
+# Install awscli
+RUN apt-get -y update
+RUN apt-get install -y python-pip
+RUN pip install awscli
+# Create config dir
+RUN mkdir ${LOGSTASH_CONF_DIR}
+RUN chown -R logstash:logstash ${LOGSTASH_CONF_DIR}
+# Install Kinesis
+RUN /opt/logstash/bin/plugin install logstash-input-kinesis
+RUN /opt/logstash/bin/plugin install logstash-filter-elasticsearch
 
 ENV PATH /opt/logstash/bin:$PATH
 
